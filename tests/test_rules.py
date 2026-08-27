@@ -13,6 +13,7 @@ class TemplateRulesTests(unittest.TestCase):
         self.assertIsNone(social['title'])
         self.assertEqual(iqiyi['title']['line_mode'], 'one_or_two')
         self.assertEqual(social['subtitle']['font_size'], 36)
+        self.assertEqual(social['subtitle']['render_font'], 'MicrosoftYaHei-Bold')
         self.assertEqual(iqiyi['subtitle']['font_size'], 35)
         self.assertEqual(iqiyi['subtitle']['font'], '思源黑体')
         self.assertEqual(iqiyi['title']['font'], 'HYZongYiJ')

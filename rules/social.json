@@ -3,7 +3,7 @@
   "canvas": {"width": 496, "height": 864, "aspect": "9:16"},
   "subtitle": {
     "font": "Microsoft YaHei",
-    "render_font": "SourceHanSansCN-Heavy",
+    "render_font": "MicrosoftYaHei-Bold",
     "font_size": 36,
     "scale_x": 100,
     "scale_y": 100,
