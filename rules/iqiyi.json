@@ -1,0 +1,29 @@
+{
+  "template": "iqiyi",
+  "canvas": {"width": 496, "height": 864, "aspect": "9:16"},
+  "subtitle": {
+    "font": "思源黑体",
+    "render_font": "SourceHanSansCN-Heavy",
+    "font_size": 35,
+    "scale_x": 100,
+    "scale_y": 100,
+    "color": "#FFFFFF",
+    "outline_color": "#101010",
+    "outline": 3,
+    "shadow": 1,
+    "alignment": 2,
+    "position": {"x": 248, "y": 629},
+    "max_lines": 2
+  },
+  "title": {
+    "font": "HYZongYiJ",
+    "font_size": 30,
+    "scale_x": 100,
+    "scale_y": 100,
+    "line_mode": "one_or_two",
+    "split": "whitespace",
+    "line_1": {"color": "#FFE500", "outline_color": "#101010", "outline": 3},
+    "line_2": {"color": "#FFFFFF", "outline_color": "#ED1C2E", "outline": 3},
+    "position": {"x": 248, "y": 82.5, "line_gap": 7.5}
+  }
+}

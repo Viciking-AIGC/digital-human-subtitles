@@ -1,0 +1,10 @@
+__pycache__/
+*.py[cod]
+assets/*-test.mp4
+assets/*-test.jpg
+assets/*-test.ass
+assets/subtitle-test-source.mp4
+assets/social-subtitle-test-y950.*
+assets/iqiyi-redfruit-test.*
+assets/fonts/NotoSansSC-VF.ttf
+outputs/*/*.jpg
