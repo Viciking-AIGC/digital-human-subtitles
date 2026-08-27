@@ -65,7 +65,7 @@ Coordinates below use the 496 x 864 reference canvas. See `rules/social.json` an
 
 | Template | Element | Font | Size | Scale | Style | Position |
 | --- | --- | --- | ---: | --- | --- | --- |
-| Social | Subtitle | Microsoft YaHei Bold (`微软雅黑`) | 36px | 100% | White, 3px black outline, 1px shadow, max 2 lines | Center, `x=248 y=629` |
+| Social | Subtitle | Microsoft YaHei product spec; Source Han Sans Heavy renderer | 36px | 100% | White, 3px black outline, 1px shadow, max 2 lines | Center, `x=248 y=629` |
 | iQiyi | Title | HanYi Variety Simplified (`HYZongYiJ`) | 30px | 100% | Line 1 yellow/3px black; line 2 white/3px red | Center, first line `y=82.5`; second line `y=120` |
 | iQiyi | Subtitle | Source Han Sans Heavy (`思源黑体`) | 35px | 100% | White, 3px black outline, 1px shadow, max 2 lines | Center, `x=248 y=629` |
 
@@ -74,7 +74,6 @@ iQiyi two-line title has a net line gap of 7.5px, which is one quarter of its 30
 ## Packaged Fonts
 
 - `assets/fonts/ZongYiTi.ttf`: HanYi Variety Simplified, used by the iQiyi title.
-- `assets/fonts/msyhbd.ttc`: Microsoft YaHei Bold, used by the Social subtitle renderer to match the original confirmed test video.
 - `assets/fonts/TeHeiTi.ttf`: Source Han Sans CN Heavy, used by the iQiyi subtitle renderer.
 
 The fixed `render_font` fields in each rule identify the fonts available to the packaged FFmpeg renderer. Do not replace them with system font fallbacks in production.
