@@ -34,7 +34,7 @@ Social does not accept a title. `selected_products` is the product array from th
 
 ### 信息流广告 Script
 
-信息流广告是独立于社交和爱奇艺的业务线。脚本只包含字幕，不接受标题。它会删除画面中的标点，把标点作为优先切分边界，并将每行限制为最多 10 个字；无标点长句会优先按常见中文语义边界切分，并保持 `红果短剧` 等配置短语完整。首次出现 `红果短剧` 时，字幕四字为白字红边并在正上方显示 Logo；后续出现仍为白字红边，但不再显示 Logo。使用 `examples/info-feed-ad-script.json`。
+信息流广告是独立于社交和爱奇艺的业务线。三条管线都在各自规则文件中单独启用去标点、标点优先切分、常见中文语义切分和每段最多 10 个字；这些公共字幕规则不会合并业务配置。信息流广告脚本只包含字幕，不接受标题，并额外处理 `红果短剧`：首次出现时四字为白字红边并在正上方显示 Logo，后续出现仍为白字红边但不再显示 Logo。使用 `examples/info-feed-ad-script.json`。
 
 ### iQiyi Script
 

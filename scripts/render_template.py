@@ -188,7 +188,7 @@ def build_ass(cfg, title, captions, title_mode='two', show_social_cta=False):
         if arrow_body is not None:
             lines.append(f"Dialogue: 2,0:00:00.00,9:59:59.00,SocialCTAArrow,,0,0,0,,{arrow_body}" + chr(10))
     rendered_captions = captions
-    if cfg.get('template') in ('redfruit', 'info_feed_ad') and s.get('punctuation_split'):
+    if s.get('punctuation_split'):
         rendered_captions = redfruit_caption_events(captions, s)
     for start, end, text in rendered_captions:
         body = esc(text)
