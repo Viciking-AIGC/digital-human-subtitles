@@ -1,6 +1,6 @@
 # Digital Human Video Layouts
 
-Fixed, no-UI rendering package for applying Social or iQiyi captions to a generated digital-human video. It accepts a finished 9:16 MP4 plus a timed user script and produces a caption-burned MP4 and its ASS source file.
+Fixed, no-UI rendering package for applying Social, 信息流广告, or iQiyi captions to a generated digital-human video. It accepts a finished 9:16 MP4 plus a timed user script and produces a caption-burned MP4 and its ASS source file.
 
 ## Requirements
 
@@ -23,13 +23,18 @@ All timestamps are seconds. Captions must be sorted, non-overlapping, have `end 
 
 ```json
 {
+  "selected_products": ["爱聊唯西"],
   "captions": [
     {"start": 0.00, "end": 2.55, "text": "王总，这是给你的礼物"}
   ]
 }
 ```
 
-Social does not accept a title.
+Social does not accept a title. `selected_products` is the product array from the upstream checkbox selection. The fixed left-side CTA (`点击下方立即使用` and arrow) is added only when this array includes at least one of `爱聊唯西`, `爱聊新远方`, or `会会新远方`. This rule applies identically to both generated digital-human videos and empty-shot videos; the renderer does not branch on video type. Omit the field or pass an empty array for the subtitle-only layout; see `examples/social-subtitle-only-script.json`. Other product names remain subtitle-only.
+
+### 信息流广告 Script
+
+信息流广告是独立于社交和爱奇艺的业务线。脚本只包含字幕，不接受标题。它会删除画面中的标点，把标点作为优先切分边界，并将每行限制为最多 10 个字；无标点长句会优先按常见中文语义边界切分，并保持 `红果短剧` 等配置短语完整。首次出现 `红果短剧` 时，字幕四字为白字红边并在正上方显示 Logo；后续出现仍为白字红边，但不再显示 Logo。使用 `examples/info-feed-ad-script.json`。
 
 ### iQiyi Script
 
@@ -59,13 +64,28 @@ python3 scripts/generate_video.py \
 
 An ASS file is emitted beside the output MP4. Specify `--ass /path/to/result.ass` to control its location.
 
+### 信息流广告固定入口
+
+The information-feed ad line has a dedicated command with fixed behavior. It accepts only the input video, the UTF-8 JSON script, and the output MP4 path:
+
+```bash
+python3 scripts/generate_info_feed_ad.py \
+  /path/to/input.mp4 \
+  examples/info-feed-ad-script.json \
+  /path/to/output.mp4
+```
+
+The command always uses the 信息流广告 rules and emits a traceable `.ass` file beside the output video. The former `redfruit` template slug remains available only as a compatibility alias.
+
 ## Fixed Layout Rules
 
-Coordinates below use the 496 x 864 reference canvas. See `rules/social.json` and `rules/iqiyi.json` for integration-ready machine-readable values.
+Coordinates below use the 496 x 864 reference canvas. See the individual rule files for integration-ready machine-readable values.
 
 | Template | Element | Font | Size | Scale | Style | Position |
 | --- | --- | --- | ---: | --- | --- | --- |
 | Social | Subtitle | Microsoft YaHei Bold (`微软雅黑`) | 36px | 100% | White, 1.5px black outline, 1px shadow, max 2 lines | Center, `x=248 y=629` |
+| Social | Conditional CTA | Microsoft YaHei Bold (`微软雅黑`) | 28px | 100% | Vertical black text, 2.5px white outline, supplied red arrow image `24x40px` | Added to both digital-human and empty-shot videos only for `爱聊唯西` / `爱聊新远方` / `会会新远方`; center-origin `X=-900 Y=0`, group offset `-20px` |
+| 信息流广告 | Subtitle | DouyinSans Bold (`抖音美好体`) | 36px | 100% | White, 1.5px black outline, 1px shadow, max 2 lines | Center, `x=248 y=629` |
 | iQiyi | Title | HanYi Variety Simplified (`HYZongYiJ`) | 30px | 100% | Line 1 yellow/3px black; line 2 white/3px red | Center, first line `y=82.5`; second line `y=120` |
 | iQiyi | Subtitle | Source Han Sans Heavy (`思源黑体`) | 35px | 100% | White, 1.5px black outline, 1px shadow, max 2 lines | Center, `x=248 y=629` |
 
@@ -75,6 +95,8 @@ iQiyi two-line title has a net line gap of 7.5px, which is one quarter of its 30
 
 - `assets/fonts/ZongYiTi.ttf`: HanYi Variety Simplified, used by the iQiyi title.
 - `assets/fonts/msyhbd.ttc`: Microsoft YaHei Bold, used by the Social subtitle renderer.
+- `assets/fonts/DouyinSansBold.ttf`: DouyinSans Bold (`抖音美好体`), used by the 信息流广告 subtitle renderer.
+- `assets/images/info-feed-ad-logo.png`: transparent Redfruit App Logo, overlaid above the first subtitle occurrence of `红果短剧` only.
 - `assets/fonts/TeHeiTi.ttf`: Source Han Sans CN Heavy, used by the iQiyi subtitle renderer.
 
 The fixed `render_font` fields in each rule identify the fonts available to the packaged FFmpeg renderer. Do not replace them with system font fallbacks in production.
@@ -85,6 +107,7 @@ The supplied test scripts use `/mnt/c/Users/EDY/Desktop/wf1202608181906444016785
 
 ```bash
 bash scripts/test_social.sh
+bash scripts/test_info_feed_ad.sh
 bash scripts/test_iqiyi.sh
 python3 -m unittest discover -s tests -v
 ```
@@ -92,6 +115,7 @@ python3 -m unittest discover -s tests -v
 Results are separate:
 
 - `outputs/social/wf12026081819064440167851968514.mp4`
+- `outputs/info_feed_ad/wf12026081819064440167851968514.mp4`
 - `outputs/iqiyi/wf12026081819064440167851968514.mp4`
 
 ## Output Contract

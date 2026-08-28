@@ -1,0 +1,29 @@
+{
+  "template": "info_feed_ad",
+  "canvas": {"width": 496, "height": 864, "aspect": "9:16"},
+  "subtitle": {
+    "font": "抖音美好体",
+    "render_font": "DouyinSans",
+    "font_file": "DouyinSansBold.ttf",
+    "font_size": 36,
+    "scale_x": 100,
+    "scale_y": 100,
+    "color": "#FFFFFF",
+    "outline_color": "#101010",
+    "outline": 1.5,
+    "shadow": 1,
+    "punctuation_split": true,
+    "max_chars_per_line": 10,
+    "keyword": "红果短剧",
+    "keyword_outline_color": "#ED1C2E",
+    "logo": {
+      "file": "assets/images/info-feed-ad-logo.png",
+      "width": 80,
+      "position": {"x": 248, "y": 500}
+    },
+    "alignment": 2,
+    "position": {"x": 248, "y": 629},
+    "max_lines": 2
+  },
+  "title": null
+}

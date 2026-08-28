@@ -13,7 +13,34 @@
     "shadow": 1,
     "alignment": 2,
     "position": {"x": 248, "y": 629},
-    "max_lines": 2
+    "max_lines": 2,
+    "punctuation_split": true,
+    "max_chars_per_line": 10,
+    "semantic_split": true
   },
-  "title": null
+  "title": null,
+  "cta": {
+    "eligible_products": ["爱聊唯西", "爱聊新远方", "会会新远方"],
+    "applicable_video_types": ["digital_human", "empty_shot"],
+    "text": "点击下方立即使用",
+    "arrow": "↓",
+    "position": {"x": -900, "y": 0},
+    "font": "Microsoft YaHei",
+    "render_font": "Microsoft YaHei",
+    "font_size": 28,
+    "line_gap": 24,
+    "color": "#101010",
+    "outline_color": "#FFFFFF",
+    "outline": 2.5,
+    "arrow_color": "#E51C23",
+    "arrow_size": 28,
+    "arrow_outline": 0,
+    "arrow_shadow": 0,
+    "arrow_vector": false,
+    "arrow_asset": "assets/images/social-cta-arrow.png",
+    "arrow_width": 24,
+    "arrow_height": 40,
+    "arrow_gap": 6,
+    "group_offset_y": -20
+  }
 }
