@@ -18,8 +18,6 @@ class TemplateRulesTests(unittest.TestCase):
         self.assertEqual(social['subtitle']['outline'], 1.5)
         self.assertEqual(social['subtitle']['position'], {'x': 248, 'y': 629})
         self.assertEqual(social['subtitle']['render_font'], 'Microsoft YaHei')
-        self.assertTrue(social['subtitle']['punctuation_split'])
-        self.assertEqual(social['subtitle']['max_chars_per_line'], 10)
         self.assertEqual(redfruit['subtitle']['font_size'], social['subtitle']['font_size'])
         self.assertEqual(redfruit['subtitle']['outline'], social['subtitle']['outline'])
         self.assertEqual(redfruit['subtitle']['shadow'], social['subtitle']['shadow'])
@@ -32,8 +30,6 @@ class TemplateRulesTests(unittest.TestCase):
         self.assertEqual(iqiyi['title']['line_1']['outline'], 3)
         self.assertEqual(iqiyi['title']['line_2']['outline'], 3)
         self.assertEqual(iqiyi['subtitle']['font'], '思源黑体')
-        self.assertTrue(iqiyi['subtitle']['punctuation_split'])
-        self.assertEqual(iqiyi['subtitle']['max_chars_per_line'], 10)
         self.assertEqual(iqiyi['title']['font'], 'HYZongYiJ')
         self.assertEqual(iqiyi['subtitle']['render_font'], 'SourceHanSansCN-Heavy')
         self.assertEqual(iqiyi['title']['position']['line_gap'], iqiyi['title']['font_size'] / 4)
@@ -93,6 +89,15 @@ class TemplateRulesTests(unittest.TestCase):
         self.assertLessEqual(max(len(event[2]) for event in events), 10)
         self.assertEqual(events[0][0], 0)
         self.assertEqual(events[-1][1], 4)
+
+    def test_information_feed_policy_is_isolated_from_other_lines(self):
+        for filename in ('social.json', 'iqiyi.json'):
+            cfg = json.loads((ROOT / 'rules' / filename).read_text())
+            ass = build_ass(cfg, '', [(0, 4, '这是一个很长的字幕内容，不能带标点！')])
+            rendered = [line for line in ass.splitlines() if line.startswith('Dialogue: 0,')]
+            self.assertEqual(len(rendered), 1)
+            self.assertIn('，', rendered[0])
+            self.assertIn('！', rendered[0])
 
     def test_redfruit_keyword_has_red_outline_only(self):
         cfg = json.loads((ROOT / 'rules/redfruit.json').read_text())

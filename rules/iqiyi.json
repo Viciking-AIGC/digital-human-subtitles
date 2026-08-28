@@ -13,10 +13,7 @@
     "shadow": 1,
     "alignment": 2,
     "position": {"x": 248, "y": 629},
-    "max_lines": 2,
-    "punctuation_split": true,
-    "max_chars_per_line": 10,
-    "semantic_split": true
+    "max_lines": 2
   },
   "title": {
     "font": "HYZongYiJ",
