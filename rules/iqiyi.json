@@ -9,7 +9,7 @@
     "scale_y": 100,
     "color": "#FFFFFF",
     "outline_color": "#101010",
-    "outline": 3,
+    "outline": 1.5,
     "shadow": 1,
     "alignment": 2,
     "position": {"x": 248, "y": 629},
