@@ -26,7 +26,19 @@ RED_FRUIT_BOUNDARY_START = (
 )
 RED_FRUIT_BOUNDARY_PHRASES = ('红果短剧', '后续内容', '精彩内容', '认错人了')
 
-def semantic_redfruit_chunks(part, max_chars):
+def is_inside_protected_phrase(text, position, phrases):
+    """Return whether a proposed split falls inside any protected phrase."""
+    for phrase in phrases:
+        if not phrase:
+            continue
+        start = text.find(phrase)
+        while start >= 0:
+            if start < position < start + len(phrase):
+                return True
+            start = text.find(phrase, start + 1)
+    return False
+
+def semantic_redfruit_chunks(part, max_chars, protected_phrases=()):
     """Split a punctuation-free sentence at likely Chinese phrase boundaries."""
     chunks = []
     while len(part) > max_chars:
@@ -36,6 +48,10 @@ def semantic_redfruit_chunks(part, max_chars):
             prefix = window[:position]
             suffix = part[position:]
             score = 0
+            # Keep configured keyword phrases in one subtitle event so their
+            # local color override is not lost across a line split.
+            if is_inside_protected_phrase(part, position, protected_phrases):
+                score -= 1000
             if prefix[-1:] in RED_FRUIT_BOUNDARY_END:
                 score += 35
             if any(suffix.startswith(marker) for marker in RED_FRUIT_BOUNDARY_START):
@@ -54,7 +70,7 @@ def semantic_redfruit_chunks(part, max_chars):
         chunks.append(part)
     return chunks
 
-def split_redfruit_text(text, max_chars=10):
+def split_redfruit_text(text, max_chars=10, protected_phrases=()):
     """Drop punctuation, split there first, then use semantic boundaries under 10 chars."""
     punctuation_parts = []
     current = []
@@ -70,8 +86,51 @@ def split_redfruit_text(text, max_chars=10):
 
     chunks = []
     for part in punctuation_parts:
-        chunks.extend(semantic_redfruit_chunks(part, max_chars))
+        chunks.extend(semantic_redfruit_chunks(part, max_chars, protected_phrases))
     return chunks
+
+def split_benxian_text(text):
+    """Split 奔现 copy into display lines while retaining inline spaces."""
+    chunks = []
+    current = []
+    for char in text:
+        if is_punctuation(char):
+            if current:
+                chunks.append(''.join(current).strip())
+                current = []
+        else:
+            current.append(char)
+    if current:
+        chunks.append(''.join(current).strip())
+    return [chunk for chunk in chunks if chunk]
+
+def split_sticker_text(text):
+    """Split sticker copy at punctuation into simultaneous display paragraphs."""
+    chunks = []
+    current = []
+    for char in text:
+        if is_punctuation(char):
+            if ''.join(current).strip():
+                chunks.append(''.join(current).strip())
+                current = []
+        else:
+            current.append(char)
+    if ''.join(current).strip():
+        chunks.append(''.join(current).strip())
+    return [chunk for chunk in chunks if chunk]
+
+def sticker_paragraphs(captions):
+    """Return caption timing paired with punctuation-separated paragraphs."""
+    return [(start, end, split_sticker_text(text)) for start, end, text in captions]
+
+def benxian_caption_events(captions, subtitle):
+    """Render each caption as one simultaneous multi-line paragraph."""
+    events = []
+    for start, end, text in captions:
+        lines = split_benxian_text(text)
+        if lines:
+            events.append((start, end, r'\N'.join(lines)))
+    return events
 
 def style_redfruit_keyword(text, keyword, outline_color):
     """Apply a red outline only to keyword occurrences; the base style remains black."""
@@ -92,12 +151,34 @@ def style_redfruit_keyword(text, keyword, outline_color):
         cursor = match + len(keyword)
     return ''.join(pieces)
 
+def style_social_keywords(text, keywords, color, outline_color, base_color, base_outline_color):
+    """Apply yellow fill and black outline only to configured social phrases."""
+    phrases = sorted({phrase for phrase in keywords if phrase}, key=len, reverse=True)
+    if not phrases:
+        return esc(text)
+    highlight = ass_color(color)
+    highlight_outline = ass_color(outline_color)
+    base = ass_color(base_color)
+    base_outline = ass_color(base_outline_color)
+    pieces = []
+    cursor = 0
+    while cursor < len(text):
+        phrase = next((candidate for candidate in phrases if text.startswith(candidate, cursor)), None)
+        if phrase is None:
+            pieces.append(esc(text[cursor]))
+            cursor += 1
+            continue
+        pieces.append(f"{{\\1c{highlight}&\\3c{highlight_outline}&}}{esc(phrase)}"
+                     f"{{\\1c{base}&\\3c{base_outline}&}}")
+        cursor += len(phrase)
+    return ''.join(pieces)
+
 def redfruit_caption_events(captions, subtitle):
     """Expand redfruit captions into non-overlapping, timed chunks."""
     max_chars = int(subtitle.get('max_chars_per_line', 10))
     events = []
     for start, end, text in captions:
-        chunks = split_redfruit_text(text, max_chars)
+        chunks = split_redfruit_text(text, max_chars, subtitle.get('highlight_keywords', ()))
         if not chunks:
             continue
         weights = [max(1, len(chunk.replace(' ', ''))) for chunk in chunks]
@@ -133,16 +214,65 @@ def standard_center_position(cfg, position):
         canvas['height'] / 2 + float(position['y']) * canvas['height'] / 1920 / 2,
     )
 
-def build_ass(cfg, title, captions, title_mode='two', show_social_cta=False):
+def build_ass(cfg, title, captions, title_mode='two', show_social_cta=False,
+              social_variant='standard', social_font=None, social_title='',
+              social_title_style=None):
     s = cfg['subtitle']
+    if cfg.get('template') == 'social' and social_variant != 'standard':
+        variant = cfg.get('variants', {}).get(social_variant)
+        if variant is None:
+            raise ValueError(f'unknown social variant: {social_variant}')
+        s = {**s, **variant}
+        selected_font = social_font or variant.get('default_font')
+        font_options = variant.get('fonts', {})
+        if selected_font not in font_options:
+            raise ValueError(f'unknown {social_variant} font: {selected_font}')
+        s.update(font_options[selected_font])
     lines = [ass_header(cfg)]
     render_font = s.get('render_font', s['font'])
-    lines.append(f"Style: Subtitle,{render_font},{s['font_size']},{ass_color(s['color'])},{ass_color(s['color'])},{ass_color(s['outline_color'])},&H00000000,-1,0,0,0,{s['scale_x']},{s['scale_y']},0,0,1,{s['outline']},{s['shadow']},2,20,20,0,1\n")
+    lines.append(f"Style: Subtitle,{render_font},{s['font_size']},{ass_color(s['color'])},{ass_color(s['color'])},{ass_color(s['outline_color'])},&H00000000,-1,0,0,0,{s['scale_x']},{s['scale_y']},0,0,1,{s['outline']},{s['shadow']},{s.get('alignment', 2)},20,20,0,1\n")
+    social_title_cfg = None
+    if cfg.get('template') == 'social' and social_variant == '奔现' and social_title:
+        title_cfg = cfg.get('variants', {}).get('奔现', {}).get('title', {})
+        style_name = social_title_style or next(iter(title_cfg.get('styles', {})), None)
+        social_title_cfg = title_cfg.get('styles', {}).get(style_name)
+        if social_title_cfg is None:
+            raise ValueError(f'unknown 奔现 title style: {style_name}')
+        title_font = social_title_cfg.get('render_font', social_title_cfg['font'])
+        bold = -1 if social_title_cfg.get('bold', False) else 0
+        italic = -1 if social_title_cfg.get('italic', False) else 0
+        lines.append(
+            f"Style: SocialTitle,{title_font},{title_cfg.get('font_size', 40)},"
+            f"{ass_color(social_title_cfg['color'])},{ass_color(social_title_cfg['color'])},"
+            f"{ass_color(social_title_cfg['outline_color'])},&H00000000,{bold},{italic},0,0,"
+            f"{social_title_cfg.get('scale_x', 100)},{social_title_cfg.get('scale_y', 100)},0,0,1,"
+            f"{social_title_cfg.get('outline', 2.5)},{social_title_cfg.get('shadow', 1)},"
+            f"{title_cfg.get('alignment', 8)},20,20,0,1\n"
+        )
     if cfg['title']:
         t = cfg['title']
         lines.append(f"Style: TitleMain,{t['font']},{t['font_size']},{ass_color(t['line_1']['color'])},{ass_color(t['line_1']['color'])},{ass_color(t['line_1']['outline_color'])},&H00000000,-1,0,0,0,{t['scale_x']},{t['scale_y']},0,0,1,{t['line_1']['outline']},0,8,20,20,0,1\n")
         lines.append(f"Style: TitleSub,{t['font']},{t['font_size']},{ass_color(t['line_2']['color'])},{ass_color(t['line_2']['color'])},{ass_color(t['line_2']['outline_color'])},&H00000000,-1,0,0,0,{t['scale_x']},{t['scale_y']},0,0,1,{t['line_2']['outline']},0,8,20,20,0,1\n")
     lines.append("\n[Events]\nFormat: Layer,Start,End,Style,Name,MarginL,MarginR,MarginV,Effect,Text\n")
+    if social_title_cfg is not None and captions:
+        title_cfg = cfg['variants']['奔现']['title']
+        title_start = min(start for start, _, _ in captions)
+        title_end = max(end for _, end, _ in captions)
+        title_position = title_cfg.get('position', {'x': 248, 'y': 50})
+        x = title_position['x']
+        # Font ascenders/descenders differ even at the same nominal size.  Keep
+        # the configured top anchor stable while allowing per-style baseline
+        # calibration to nudge the rendered glyph box by a few pixels.
+        y = float(title_position['y']) + float(social_title_cfg.get('baseline_offset_y', 0))
+        # A title may be supplied from the material library or as free text.
+        # Treat the first whitespace as the optional two-line break and keep
+        # the whole title in one centered ASS event.
+        title_parts = re.split(r'\s+', social_title.strip(), maxsplit=1)
+        title_body = r'\N'.join(esc(part) for part in title_parts)
+        lines.append(
+            f"Dialogue: 1,{ts(title_start)},{ts(title_end)},SocialTitle,,0,0,0,,"
+            f"{{\\pos({x},{y:g})}}{title_body}\n"
+        )
     if cfg['title'] and title:
         parts = re.split(r'\s+', title.strip(), maxsplit=1)
         t = cfg['title']; x, y = t['position']['x'], t['position']['y']
@@ -188,13 +318,336 @@ def build_ass(cfg, title, captions, title_mode='two', show_social_cta=False):
         if arrow_body is not None:
             lines.append(f"Dialogue: 2,0:00:00.00,9:59:59.00,SocialCTAArrow,,0,0,0,,{arrow_body}" + chr(10))
     rendered_captions = captions
-    if s.get('punctuation_split'):
+    if cfg.get('template') == 'social' and social_variant == '奔现':
+        rendered_captions = benxian_caption_events(captions, s)
+    elif s.get('punctuation_split'):
         rendered_captions = redfruit_caption_events(captions, s)
     for start, end, text in rendered_captions:
         body = esc(text)
+        if cfg.get('template') == 'social' and social_variant == '奔现':
+            # ASS uses a single backslash N as an in-event line break; keep it
+            # intact while still escaping user-provided backslashes elsewhere.
+            body = body.replace(r'\\N', r'\N')
         if cfg.get('template') in ('redfruit', 'info_feed_ad'):
             body = style_redfruit_keyword(text, s.get('keyword', ''), s.get('keyword_outline_color', '#ED1C2E'))
-        lines.append(f"Dialogue: 0,{ts(start)},{ts(end)},Subtitle,,0,0,0,,{{\\pos({s['position']['x']},{s['position']['y']})}}{body}\n")
+        elif cfg.get('template') == 'social' and social_variant == 'standard':
+            body = style_social_keywords(
+                text,
+                s.get('highlight_keywords', ()),
+                s.get('highlight_color', '#FFE500'),
+                s.get('highlight_outline_color', s.get('outline_color', '#101010')),
+                s.get('color', '#FFFFFF'),
+                s.get('outline_color', '#101010'),
+            )
+        position = s['position']
+        baseline_offset_y = float(s.get('baseline_offset_y', 0))
+        if s.get('position_mode') == 'center_origin':
+            x, y = standard_center_position(cfg, position)
+            y += baseline_offset_y
+            position_text = f'{x:g},{y:g}'
+        else:
+            y = float(position['y']) + baseline_offset_y
+            position_text = f"{position['x']},{y:g}"
+        lines.append(f"Dialogue: 0,{ts(start)},{ts(end)},Subtitle,,0,0,0,,{{\\pos({position_text})}}{body}\n")
+    return ''.join(lines)
+
+def ass_color_alpha(hex_color, alpha):
+    """ASS color with an explicit alpha byte (00=opaque, FF=transparent)."""
+    h = hex_color.lstrip('#')
+    return '&H' + alpha.upper() + h[4:6] + h[2:4] + h[0:2]
+
+def xindong_effective_len(text):
+    """CJK glyphs count 1, others 0.55, for sticker width estimation."""
+    return sum(1.0 if ord(char) > 0x2E7F else 0.55 for char in text)
+
+def xindong_geometry(cfg, text):
+    """Return font size and estimated half-width for one sticker line."""
+    s = cfg['sticker']
+    eff_len = max(xindong_effective_len(text), 1.0)
+    font_size = min(s['font_size'], max(s['min_font_size'], int(s['max_width'] / eff_len)))
+    return font_size, font_size * eff_len / 2
+
+XINDONG_LAYER_ORDER = ('glow_out', 'glow', 'cyan', 'pink', 'face')
+
+def build_xindong_ass(cfg, captions):
+    """Render punctuation-separated paragraphs as a stacked layered sticker."""
+    s = cfg['sticker']
+    layers = s['layers']
+    outline = ass_color(s['outline_color'])
+    pos = s['position']
+    pop = s['pop']
+    scale_x = float(s.get('scale_x', 100))
+    scale_y = float(s.get('scale_y', 100))
+    lines = [ass_header(cfg)]
+    for name in XINDONG_LAYER_ORDER:
+        layer = layers[name]
+        color = ass_color_alpha(layer['color'], layer['alpha'])
+        outline_color = outline if layer['alpha'] == '00' else color
+        lines.append(f"Style: Xindong-{name},{s['font']},{s['font_size']},{color},{color},{outline_color},&H00000000,0,0,0,0,{scale_x:g},{scale_y:g},0,0,1,{layer['outline']},0,5,0,0,0,1\n")
+    lines.append("\n[Events]\nFormat: Layer,Start,End,Style,Name,MarginL,MarginR,MarginV,Effect,Text\n")
+    pop_transform = (r"\fscx{0:g}\fscy{1:g}\t(0,{2:g},1.4,\fscx{3:g}\fscy{4:g})\t({2:g},{5:g},0.7,\fscx{6:g}\fscy{7:g})"
+                     .format(scale_x * pop['scale_from'] / 100,
+                             scale_y * pop['scale_from'] / 100,
+                             pop['t1_ms'],
+                             scale_x * pop['overshoot'] / 100,
+                             scale_y * pop['overshoot'] / 100,
+                             pop['t2_ms'], scale_x, scale_y))
+    paragraph_gap = float(s.get('paragraph', {}).get('line_gap', 12))
+    for start, end, text in captions:
+        paragraphs = split_sticker_text(text) or [text.strip()]
+        metrics = [xindong_geometry(cfg, paragraph) for paragraph in paragraphs]
+        row_step = max((font_size for font_size, _ in metrics), default=s['font_size']) + paragraph_gap
+        block_center = (len(paragraphs) - 1) / 2
+        max_font_size = max((font_size for font_size, _ in metrics), default=s['font_size'])
+        for row, (paragraph, (font_size, half_width)) in enumerate(zip(paragraphs, metrics)):
+            k = font_size / s['font_size']
+            row_y = pos['y'] - max_font_size / 2 - (len(paragraphs) - 1 - row) * row_step
+            row_x = pos['x'] + half_width if s.get('position_mode') == 'left_bottom' else pos['x']
+            for depth, name in enumerate(XINDONG_LAYER_ORDER):
+                layer = layers[name]
+                offset_x = layer.get('offset_x', layer['offset']) * k
+                offset_y = layer.get('offset_y', layer['offset']) * k
+                tags = (f"{{\\an5\\pos({row_x + offset_x:g},{row_y + offset_y:g})\\fs{font_size}"
+                        f"\\bord{layer['outline'] * k:g}\\blur{layer['blur'] * k:g}{pop_transform}}}")
+                lines.append(f"Dialogue: {depth},{ts(start)},{ts(end)},Xindong-{name},,0,0,0,,{tags}{esc(paragraph)}\n")
+    return ''.join(lines)
+
+def shuangxiang_geometry(cfg, text):
+    """Return (font_size, advance, half_width) for one staggered sticker line."""
+    s = cfg['sticker']
+    n = max(len(text), 1)
+    base = s['font_size']
+    if n > 1:
+        fit = int(2 * s['max_half_width'] / (s['advance_ratio'] * (n - 1) + 1))
+        font_size = min(base, max(s['min_font_size'], fit))
+    else:
+        font_size = base
+    advance = s['advance_ratio'] * font_size
+    half_width = ((n - 1) * advance + font_size) / 2
+    return font_size, advance, half_width
+
+SHUANGXIANG_LAYER_ORDER = ('glow_out', 'glow', 'face_top', 'face_bottom')
+SHUANGXIANG_FACE_LAYERS = ('face_top', 'face_bottom')
+
+def build_shuangxiang_ass(cfg, captions):
+    """Render punctuation-separated paragraphs as stacked neon glyph rows.
+
+    The pink-blue face is faked with two half-height clipped layers: pink on
+    top, blue on bottom, both edge-blurred so the seam reads as a gradient.
+    """
+    s = cfg['sticker']
+    layers = s['layers']
+    pos = s['position']
+    ent = s['entrance']
+    scale_x = float(s.get('scale_x', 100))
+    scale_y = float(s.get('scale_y', 100))
+    italic = -1 if s.get('italic') else 0
+    grow = float(ent['scale_from']) / 100
+    lines = [ass_header(cfg)]
+    for name in SHUANGXIANG_LAYER_ORDER:
+        layer = layers[name]
+        color = ass_color_alpha(layer['color'], layer['alpha'])
+        lines.append(f"Style: Shuangxiang-{name},{s['font']},{s['font_size']},{color},{color},{color},&H00000000,0,{italic},0,0,{scale_x:g},{scale_y:g},0,0,1,{layer['outline']},0,5,0,0,0,1\n")
+    lines.append("\n[Events]\nFormat: Layer,Start,End,Style,Name,MarginL,MarginR,MarginV,Effect,Text\n")
+    paragraph_gap = float(s.get('paragraph', {}).get('line_gap', 18))
+    for start, end, text in captions:
+        paragraphs = split_sticker_text(text) or [text.strip()]
+        metrics = [shuangxiang_geometry(cfg, paragraph) for paragraph in paragraphs]
+        row_step = max((font_size for font_size, _, _ in metrics), default=s['font_size']) + paragraph_gap
+        block_center = (len(paragraphs) - 1) / 2
+        max_font_size = max((font_size for font_size, _, _ in metrics), default=s['font_size'])
+        for row, (paragraph, (font_size, advance, half_width)) in enumerate(zip(paragraphs, metrics)):
+            k = font_size / s['font_size']
+            stagger = s['stagger'] * k
+            n = len(paragraph)
+            row_center_y = pos['y'] - max_font_size / 2 - (len(paragraphs) - 1 - row) * row_step
+            row_center_x = pos['x'] + half_width if s.get('position_mode') == 'left_bottom' else pos['x']
+            for index, char in enumerate(paragraph):
+                char_x = row_center_x + (index - (n - 1) / 2) * advance
+                char_y = row_center_y + (stagger if index % 2 else -stagger)
+                for depth, name in enumerate(SHUANGXIANG_LAYER_ORDER):
+                    layer = layers[name]
+                    offset_x = layer.get('offset_x', layer['offset']) * k
+                    offset_y = layer.get('offset_y', layer['offset']) * k
+                    entrance = (f"\\fscx{scale_x * grow:g}\\fscy{scale_y * grow:g}\\blur{ent['blur_from']}"
+                                f"\\t(0,{ent['duration_ms']},0.8,\\fscx{scale_x:g}\\fscy{scale_y:g}\\blur{layer['blur'] * k:g})")
+                    clip = ''
+                    if name in SHUANGXIANG_FACE_LAYERS:
+                        half_box = font_size * 0.62
+                        y_top = char_y - font_size * 0.75
+                        y_bottom = char_y + font_size * 0.75
+                        y_split = char_y + (font_size * 0.05 if name == 'face_top' else -font_size * 0.05)
+                        y1, y2 = (y_top, y_split) if name == 'face_top' else (y_split, y_bottom)
+                        clip = f"\\clip({char_x - half_box:g},{y1:g},{char_x + half_box:g},{y2:g})"
+                    tags = (f"{{\\pos({char_x + offset_x:g},{char_y + offset_y:g})\\fs{font_size}"
+                            f"\\bord{layer['outline'] * k:g}{clip}{entrance}}}")
+                    lines.append(f"Dialogue: {depth},{ts(start)},{ts(end)},Shuangxiang-{name},,0,0,0,,{tags}{esc(char)}\n")
+    return ''.join(lines)
+
+def siyue_geometry(cfg, text):
+    """Return (font_size, half_width) for one centered 人间四月天 line."""
+    s = cfg['sticker']
+    eff_len = max(xindong_effective_len(text), 1.0)
+    font_size = min(s['font_size'], max(s['min_font_size'], int(s['max_width'] / eff_len)))
+    return font_size, font_size * eff_len / 2
+
+SIYUE_LAYER_ORDER = ('glow_out', 'glow', 'face')
+
+def build_siyue_ass(cfg, captions):
+    """Render punctuation-separated paragraphs as stacked serif lines."""
+    s = cfg['sticker']
+    layers = s['layers']
+    pos = s['position']
+    ent = s['entrance']
+    scale_x = float(s.get('scale_x', 100))
+    scale_y = float(s.get('scale_y', 100))
+    lines = [ass_header(cfg)]
+    for name in SIYUE_LAYER_ORDER:
+        layer = layers[name]
+        color = ass_color_alpha(layer['color'], layer['alpha'])
+        outline_color = color if layer['alpha'] != '00' else ass_color(layers['glow']['color'])
+        lines.append(f"Style: Siyue-{name},{s['font']},{s['font_size']},{color},{color},{outline_color},&H00000000,0,0,0,0,{scale_x:g},{scale_y:g},0,0,1,{layer['outline']},0,5,0,0,0,1\n")
+    lines.append("\n[Events]\nFormat: Layer,Start,End,Style,Name,MarginL,MarginR,MarginV,Effect,Text\n")
+    paragraph_gap = float(s.get('paragraph', {}).get('line_gap', 12))
+    for start, end, text in captions:
+        paragraphs = split_sticker_text(text) or [text.strip()]
+        metrics = [siyue_geometry(cfg, paragraph) for paragraph in paragraphs]
+        row_step = max((font_size for font_size, _ in metrics), default=s['font_size']) + paragraph_gap
+        block_center = (len(paragraphs) - 1) / 2
+        max_font_size = max((font_size for font_size, _ in metrics), default=s['font_size'])
+        for row, (paragraph, (font_size, half_width)) in enumerate(zip(paragraphs, metrics)):
+            k = font_size / s['font_size']
+            row_y = pos['y'] - max_font_size / 2 - (len(paragraphs) - 1 - row) * row_step
+            row_x = pos['x'] + half_width if s.get('position_mode') == 'left_bottom' else pos['x']
+            for depth, name in enumerate(SIYUE_LAYER_ORDER):
+                layer = layers[name]
+                blur_rest = layer['blur'] * k
+                entrance = (f"\\fscx{scale_x * ent['scale_from'] / 100:g}\\fscy{scale_y * ent['scale_from'] / 100:g}\\blur{blur_rest + ent['blur_from']:g}"
+                            f"\\t(0,{ent['duration_ms']},0.8,\\fscx{scale_x:g}\\fscy{scale_y:g}\\blur{blur_rest:g})")
+                tags = (f"{{\\an5\\pos({row_x:g},{row_y:g})\\fs{font_size}"
+                        f"\\bord{layer['outline'] * k:g}{entrance}}}")
+                lines.append(f"Dialogue: {depth},{ts(start)},{ts(end)},Siyue-{name},,0,0,0,,{tags}{esc(paragraph)}\n")
+    return ''.join(lines)
+
+def xiari_geometry(cfg, text):
+    """Return (font_size, center_x, paper_half_width) for one 夏日限定美好 line.
+
+    The paper strip width follows the text: text width plus a fixed margin on
+    each side, capped at paper.max_width (the font shrinks to respect the cap).
+    """
+    s = cfg['sticker']
+    paper = s['paper']
+    margin = float(paper['margin'])
+    max_text = float(paper['max_width']) - 2 * margin
+    eff_len = max(xindong_effective_len(text), 1.0)
+    font_size = min(s['font_size'], max(s['min_font_size'], int(max_text / eff_len)))
+    paper_half = min(float(paper['max_width']) / 2, font_size * eff_len / 2 + margin)
+    return font_size, float(s['position']['x']), paper_half
+
+def xiari_paragraph_geometry(cfg, paragraphs):
+    """Return shared font/strip geometry for a stacked punctuation-split block."""
+    s = cfg['sticker']
+    paper = s['paper']
+    margin = float(paper['margin'])
+    max_text = float(paper['max_width']) - 2 * margin
+    effective_lengths = [max(xindong_effective_len(paragraph), 1.0) for paragraph in paragraphs]
+    longest = max(effective_lengths, default=1.0)
+    font_size = min(s['font_size'], max(s['min_font_size'], int(max_text / longest)))
+    paper_half = min(float(paper['max_width']) / 2, font_size * longest / 2 + margin)
+    line_gap = float(s.get('paragraph', {}).get('line_gap', 8))
+    row_step = font_size + line_gap
+    paper_height = max(float(paper['height']), len(paragraphs) * font_size + max(0, len(paragraphs) - 1) * line_gap + 20)
+    return font_size, float(s['position']['x']), paper_half, row_step, paper_height
+
+def build_xiari_ass(cfg, captions):
+    """Render punctuation-separated paragraphs as typewriter lines on one strip.
+
+    One Dialogue event per prefix: event i shows text[:i+1] from its reveal
+    time until the caption ends, so characters appear one by one while the
+    partial line stays centered on the strip.
+    """
+    s = cfg['sticker']
+    pos = s['position']
+    tw = s['typewriter']
+    color = ass_color_alpha(s['color'], '00')
+    lines = [ass_header(cfg)]
+    lines.append(f"Style: Xiari,{s['font']},{s['font_size']},{color},{color},{color},&H00000000,0,0,0,0,100,100,0,0,1,0,0,5,0,0,0,1\n")
+    lines.append("\n[Events]\nFormat: Layer,Start,End,Style,Name,MarginL,MarginR,MarginV,Effect,Text\n")
+    for start, end, text in captions:
+        paragraphs = split_sticker_text(text) or [text.strip()]
+        font_size, center_x, _, row_step, paper_height = xiari_paragraph_geometry(cfg, paragraphs)
+        block_center = (len(paragraphs) - 1) / 2
+        block_center_y = pos['y'] - paper_height / 2 if s.get('position_mode') == 'left_bottom' else pos['y']
+        for row, paragraph in enumerate(paragraphs):
+            row_y = block_center_y + (row - block_center) * row_step
+            text_half_width = font_size * max(xindong_effective_len(paragraph), 1.0) / 2
+            row_x = center_x + text_half_width if s.get('position_mode') == 'left_bottom' else center_x
+            reveals = [start + float(tw['delay']) + index * float(tw['char_seconds'])
+                       for index in range(len(paragraph))]
+            reveals = [reveal for reveal in reveals if reveal < end]
+            for index, reveal in enumerate(reveals):
+                # each prefix is replaced by the next one, so events never overlap
+                prefix_end = reveals[index + 1] if index + 1 < len(reveals) else end
+                tags = f"{{\\an5\\pos({row_x:g},{row_y:g})\\fs{font_size}}}"
+                lines.append(f"Dialogue: 0,{ts(reveal)},{ts(prefix_end)},Xiari,,0,0,0,,{tags}{esc(paragraph[:index + 1])}\n")
+    return ''.join(lines)
+
+HUANGXING_LAYER_ORDER = ('glow_out', 'glow', 'outline', 'face')
+
+def huangxing_lines(text):
+    """Split a caption into main/sub lines on '|'; a single line stays one."""
+    parts = [part.strip() for part in text.split('|') if part.strip()]
+    return parts[:2] if parts else ['']
+
+def huangxing_geometry(cfg, text):
+    """Return (font_size, block_half_width) for the 黄色星星 sticker.
+
+    Both lines share one size, shrunk together so the longest line fits.
+    """
+    s = cfg['sticker']
+    lengths = [max(xindong_effective_len(line), 1.0) for line in huangxing_lines(text)]
+    longest = max(lengths, default=1.0)
+    size = min(s['font_size'], max(s['min_font_size'], int(s['max_width'] / longest)))
+    return size, size * longest / 2
+
+def build_huangxing_ass(cfg, captions):
+    """Render each caption as one or two centered italic lines with a warm glow.
+
+    Layers per line: soft outer glow, glow, hard warm outline, cream face.
+    Entrance: 85% scale + blur easing to sharp over the configured duration.
+    """
+    s = cfg['sticker']
+    layers = s['layers']
+    pos = s['position']
+    ent = s['entrance']
+    italic = -1 if s.get('italic') else 0
+    scale_x = float(s.get('scale_x', 100))
+    scale_y = float(s.get('scale_y', 100))
+    lines = [ass_header(cfg)]
+    for name in HUANGXING_LAYER_ORDER:
+        layer = layers[name]
+        color = ass_color_alpha(layer['color'], layer['alpha'])
+        outline_color = color if layer['alpha'] != '00' else ass_color(layer['color'])
+        lines.append(f"Style: Huangxing-{name},{s['font']},{s['font_size']},{color},{color},{outline_color},&H00000000,0,{italic},0,0,{scale_x:g},{scale_y:g},0,0,1,{layer['outline']},0,5,0,0,0,1\n")
+    lines.append("\n[Events]\nFormat: Layer,Start,End,Style,Name,MarginL,MarginR,MarginV,Effect,Text\n")
+    for start, end, text in captions:
+        size, _ = huangxing_geometry(cfg, text)
+        text_lines = huangxing_lines(text)
+        gap = float(s['line_gap'])
+        if len(text_lines) == 1:
+            ys = [float(pos['y'])]
+        else:
+            ys = [pos['y'] - gap / 2, pos['y'] + gap / 2]
+        for line, y in zip(text_lines, ys):
+            k = size / s['font_size']
+            for depth, name in enumerate(HUANGXING_LAYER_ORDER):
+                layer = layers[name]
+                blur_rest = layer['blur'] * k
+                entrance = (f"\\fscx{scale_x * ent['scale_from'] / 100:g}\\fscy{scale_y * ent['scale_from'] / 100:g}\\blur{blur_rest + ent['blur_from']:g}"
+                            f"\\t(0,{ent['duration_ms']},0.8,\\fscx{scale_x:g}\\fscy{scale_y:g}\\blur{blur_rest:g})")
+                tags = (f"{{\\an5\\pos({pos['x']},{y:g})\\fs{size}"
+                        f"\\bord{layer['outline'] * k:g}{entrance}}}")
+                lines.append(f"Dialogue: {depth},{ts(start)},{ts(end)},Huangxing-{name},,0,0,0,,{tags}{esc(line)}\n")
     return ''.join(lines)
 
 def main():

@@ -11,12 +11,128 @@
     "outline_color": "#101010",
     "outline": 1.5,
     "shadow": 1,
+    "highlight_keywords": [
+      "同城夜聊",
+      "同城约会吧",
+      "爱聊",
+      "爱聊唯西",
+      "爱聊新远方",
+      "会会",
+      "会会新远方",
+      "会会宇视",
+      "本地寻友",
+      "他趣",
+      "闪糖",
+      "甜话"
+    ],
+    "highlight_color": "#FFE500",
+    "highlight_outline_color": "#101010",
     "alignment": 2,
     "position": {"x": 248, "y": 629},
     "max_lines": 2,
     "punctuation_split": true,
     "max_chars_per_line": 10,
     "semantic_split": true
+  },
+  "variants": {
+    "奔现": {
+      "fonts": {
+        "标题圆": {
+          "font": "优设标题圆",
+          "render_font": "YouSheBiaoTiYuan",
+          "font_file": "YousheTitleYuan.ttf",
+          "scale_x": 108,
+          "scale_y": 117,
+          "baseline_offset_y": 0
+        },
+        "抖音体": {
+          "font": "抖音体",
+          "render_font": "DouyinSans",
+          "font_file": "DouyinSansBold.ttf",
+          "scale_x": 92,
+          "scale_y": 88,
+          "baseline_offset_y": 0
+        },
+        "新青年体": {
+          "font": "文悦新青年体",
+          "render_font": "WenYue XinQingNianTi (Non-Commercial Use) W8",
+          "font_file": "WenYueXinQingNianTi.otf",
+          "scale_x": 110,
+          "scale_y": 91,
+          "baseline_offset_y": 0
+        },
+        "美玲体": {
+          "font": "字由美玲体",
+          "render_font": "HelloFont MeiLingTi",
+          "font_file": "MeiLingTi.ttf",
+          "scale_x": 100,
+          "scale_y": 100,
+          "baseline_offset_y": 0
+        },
+        "江户招牌": {
+          "font": "字由点字江户招牌黑",
+          "render_font": "HelloFont ID JiangHuZhaoPaiHei",
+          "font_file": "JiangHuZhaoPai.ttf",
+          "scale_x": 100,
+          "scale_y": 100,
+          "baseline_offset_y": 0
+        },
+        "仓耳丰黑": {
+          "font": "仓耳丰黑",
+          "render_font": "TsangerFengHei",
+          "font_file": "CangErFengHei.ttf",
+          "scale_x": 100,
+          "scale_y": 100,
+          "baseline_offset_y": 0
+        }
+      },
+      "default_font": "标题圆",
+      "font_size": 32,
+      "color": "#FFFFFF",
+      "outline_color": "#101010",
+      "outline": 1.5,
+      "shadow": 1,
+      "alignment": 1,
+      "position": {"x": 50, "y": 700},
+      "requested_position": {"x": -260, "y": -800},
+      "position_mode": "canvas",
+      "split_on_delimiters": true,
+      "video_scope": "middle",
+      "title": {
+        "font_size": 35,
+        "alignment": 8,
+        "position": {"x": 248, "y": 50},
+        "video_scope": "middle",
+        "styles": {
+          "心动时刻": {
+            "font": "HYZongYiJ",
+            "render_font": "HYZongYiJ",
+            "color": "#FFFFFF",
+            "outline_color": "#F35B9B",
+            "outline": 2.5,
+            "shadow": 1,
+            "scale_x": 100,
+            "scale_y": 100,
+            "baseline_offset_y": 0,
+            "bold": true,
+            "italic": false
+          },
+          "黄色星星": {
+            "font": "HYZongYiJ",
+            "render_font": "HYZongYiJ",
+            "color": "#FFFDF4",
+            "outline_color": "#B85C2E",
+            "outline": 2.5,
+            "shadow": 1,
+            "scale_x": 100,
+            "scale_y": 100,
+            "baseline_offset_y": 0,
+            "bold": true,
+            "italic": true
+          }
+        }
+      }
+    }
   },
   "title": null,
   "cta": {

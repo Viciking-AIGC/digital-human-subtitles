@@ -1,0 +1,33 @@
+{
+  "template": "xindong",
+  "canvas": {"width": 496, "height": 864, "aspect": "9:16"},
+  "sticker": {
+    "font": "HYZongYiJ",
+    "font_size": 74,
+    "max_width": 300,
+    "min_font_size": 28,
+    "paragraph": {"line_gap": 12},
+    "position": {"x": 50, "y": 700},
+    "position_mode": "left_bottom",
+    "outline_color": "#101010",
+    "layers": {
+      "glow_out": {"color": "#FF8FC0", "alpha": "8C", "outline": 18, "blur": 8, "offset": 0},
+      "glow": {"color": "#FF6FB0", "alpha": "55", "outline": 12, "blur": 4, "offset": 0},
+      "cyan": {"color": "#9BE8EE", "alpha": "00", "outline": 2.5, "blur": 0, "offset": 8},
+      "pink": {"color": "#F35B9B", "alpha": "00", "outline": 2.5, "blur": 0, "offset": 4},
+      "face": {"color": "#FFFFFF", "alpha": "00", "outline": 2.5, "blur": 0, "offset": 0}
+    },
+    "pop": {"scale_from": 15, "overshoot": 115, "t1_ms": 160, "t2_ms": 280},
+    "hearts": {
+      "left": "assets/images/xindong-heart-l.png",
+      "right": "assets/images/xindong-heart-r.png",
+      "size": 125,
+      "tilt_deg": 18,
+      "peek": 20,
+      "pulse_amp": 0.14,
+      "pulse_freq": 1.9,
+      "grow_seconds": 0.3
+    },
+    "sparkles": {"fps": 30, "tail_seconds": 0.2}
+  }
+}

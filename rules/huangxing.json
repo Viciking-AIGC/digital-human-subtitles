@@ -1,0 +1,29 @@
+{
+  "template": "huangxing",
+  "canvas": {"width": 496, "height": 864, "aspect": "9:16"},
+  "sticker": {
+    "font": "HYZongYiJ",
+    "italic": true,
+    "font_size": 60,
+    "min_font_size": 24,
+    "max_width": 380,
+    "position": {"x": 248, "y": 424},
+    "line_gap": 64,
+    "layers": {
+      "glow_out": {"color": "#E9A860", "alpha": "8C", "outline": 8, "blur": 5, "offset": 0},
+      "glow": {"color": "#D98A4E", "alpha": "55", "outline": 4.5, "blur": 2, "offset": 0},
+      "outline": {"color": "#B85C2E", "alpha": "00", "outline": 2.5, "blur": 0, "offset": 0},
+      "face": {"color": "#FFFDF4", "alpha": "00", "outline": 0, "blur": 0, "offset": 0}
+    },
+    "entrance": {"scale_from": 85, "blur_from": 3, "duration_ms": 250},
+    "stars": {
+      "asset": "assets/images/huangxing-star.png",
+      "size": 44,
+      "color": "#FCE9B8",
+      "x_gap": 36,
+      "y_ratio": 0.55,
+      "twinkle_amp": 0.25,
+      "twinkle_freq": 1.6
+    }
+  }
+}
