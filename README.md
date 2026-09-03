@@ -30,7 +30,7 @@ All timestamps are seconds. Captions must be sorted, non-overlapping, have `end 
 }
 ```
 
-Social does not accept a title. `selected_products` is the product array from the upstream checkbox selection. The fixed left-side CTA (`点击下方立即使用` and arrow) is added only when this array includes at least one of `爱聊唯西`, `爱聊新远方`, or `会会新远方`. This rule applies identically to both generated digital-human videos and empty-shot videos; the renderer does not branch on video type. Omit the field or pass an empty array for the subtitle-only layout; see `examples/social-subtitle-only-script.json`. Other product names remain subtitle-only.
+Social does not accept a title. `selected_products` is the product array from the upstream checkbox selection. The fixed left-side CTA (`点击下方立即使用` and arrow) is added only when this array includes at least one of `爱聊唯西`, `爱聊新远方`, `会会新远方`, or `甜话`. This rule applies identically to both generated digital-human videos and empty-shot videos; the renderer does not branch on video type. Omit the field or pass an empty array for the subtitle-only layout; see `examples/social-subtitle-only-script.json`. Other product names remain subtitle-only.
 
 ### 信息流广告 Script
 
@@ -84,7 +84,7 @@ Coordinates below use the 496 x 864 reference canvas. See the individual rule fi
 | Template | Element | Font | Size | Scale | Style | Position |
 | --- | --- | --- | ---: | --- | --- | --- |
 | Social | Subtitle | Microsoft YaHei Bold (`微软雅黑`) | 36px | 100% | White, 1.5px black outline, 1px shadow, max 2 lines | Center, `x=248 y=629` |
-| Social | Conditional CTA | Microsoft YaHei Bold (`微软雅黑`) | 28px | 100% | Vertical black text, 2.5px white outline, supplied red arrow image `24x40px` | Added to both digital-human and empty-shot videos only for `爱聊唯西` / `爱聊新远方` / `会会新远方`; center-origin `X=-900 Y=0`, group offset `-20px` |
+| Social | Conditional CTA | Microsoft YaHei Bold (`微软雅黑`) | 28px | 100% | Vertical black text, 2.5px white outline, supplied red arrow image `24x40px` | Added to both digital-human and empty-shot videos only for `爱聊唯西` / `爱聊新远方` / `会会新远方` / `甜话`; center-origin `X=-900 Y=0`, group offset `-20px` |
 | 信息流广告 | Subtitle | DouyinSans Bold (`抖音美好体`) | 36px | 100% | White, 1.5px black outline, 1px shadow, max 2 lines | Center, `x=248 y=629` |
 | iQiyi | Title | HanYi Variety Simplified (`HYZongYiJ`) | 30px | 100% | Line 1 yellow/3px black; line 2 white/3px red | Center, first line `y=82.5`; second line `y=120` |
 | iQiyi | Subtitle | Source Han Sans Heavy (`思源黑体`) | 35px | 100% | White, 1.5px black outline, 1px shadow, max 2 lines | Center, `x=248 y=629` |
